@@ -7,12 +7,12 @@ void BMPWrite(RGBTRIPLE**& rgb, int imWidth, int imHeight, std::string);
 unsigned char get_row_data_padding(unsigned int width);
 unsigned int bmp24b_file_size_calc(unsigned int width, unsigned int height);
 
-// Определение величины дополнения на случай если ширина изображения не кратна 4
+// РћРїСЂРµРґРµР»РµРЅРёРµ РІРµР»РёС‡РёРЅС‹ РґРѕРїРѕР»РЅРµРЅРёСЏ РЅР° СЃР»СѓС‡Р°Р№ РµСЃР»Рё С€РёСЂРёРЅР° РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РЅРµ РєСЂР°С‚РЅР° 4
 unsigned char get_row_data_padding(unsigned int width) {
 	return (width % 4 == 0) ? 0 : (4 - (width * sizeof(RGBTRIPLE)) % 4);
 }
 
-// Вычисление размера BMP файла
+// Р’С‹С‡РёСЃР»РµРЅРёРµ СЂР°Р·РјРµСЂР° BMP С„Р°Р№Р»Р°
 unsigned int bmp24b_file_size_calc(unsigned int width, unsigned int height) {
 	return sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + height * (width * sizeof(RGBTRIPLE) + get_row_data_padding(width));
 }
@@ -21,71 +21,68 @@ unsigned int bmp24b_file_size_calc(unsigned int width, unsigned int height) {
 void BMPRead(RGBTRIPLE**& rgb, BITMAPFILEHEADER& header, \
 	BITMAPINFOHEADER& bmiHeader, std::string fin)
 {
-	// Открываем файл BMP
+	// РћС‚РєСЂС‹РІР°РµРј С„Р°Р№Р» BMP
 	std::ifstream InFile(fin, std::ios::binary);
-	// Считываем заголовок файла
+	// РЎС‡РёС‚С‹РІР°РµРј Р·Р°РіРѕР»РѕРІРѕРє С„Р°Р№Р»Р°
 	InFile.read((char*)(&header), sizeof(BITMAPFILEHEADER));
-	// Считываем заголовочную часть изображения
+	// РЎС‡РёС‚С‹РІР°РµРј Р·Р°РіРѕР»РѕРІРѕС‡РЅСѓСЋ С‡Р°СЃС‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
 	InFile.read((char*)(&bmiHeader), sizeof(BITMAPINFOHEADER));
-	// Выделяем память под массив RGB хранящий структуры RGBTRIPLE
+	// Р’С‹РґРµР»СЏРµРј РїР°РјСЏС‚СЊ РїРѕРґ РјР°СЃСЃРёРІ RGB С…СЂР°РЅСЏС‰РёР№ СЃС‚СЂСѓРєС‚СѓСЂС‹ RGBTRIPLE
 	rgb = new RGBTRIPLE * [bmiHeader.biHeight];
-	// формируем единую область данных для оптимизации хранения
+	// С„РѕСЂРјРёСЂСѓРµРј РµРґРёРЅСѓСЋ РѕР±Р»Р°СЃС‚СЊ РґР°РЅРЅС‹С… РґР»СЏ РѕРїС‚РёРјРёР·Р°С†РёРё С…СЂР°РЅРµРЅРёСЏ
 	rgb[0] = new RGBTRIPLE[bmiHeader.biWidth * bmiHeader.biHeight];
 	for (int i = 1; i < bmiHeader.biHeight; i++)
-	{   // нестраиваем указатели начала каждой строки
+	{   // РЅРµСЃС‚СЂР°РёРІР°РµРј СѓРєР°Р·Р°С‚РµР»Рё РЅР°С‡Р°Р»Р° РєР°Р¶РґРѕР№ СЃС‚СЂРѕРєРё
 		rgb[i] = &rgb[0][bmiHeader.biWidth * i];
 	}
-
-	// перемещаемся на начало данных изображения
+	// РїРµСЂРµРјРµС‰Р°РµРјСЃСЏ РЅР° РЅР°С‡Р°Р»Рѕ РґР°РЅРЅС‹С… РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
 	InFile.seekg(header.bfOffBits, std::ios::beg);
-
-	// определяем величину дополнения на случай если ширина изображения не кратна 4
+	// РѕРїСЂРµРґРµР»СЏРµРј РІРµР»РёС‡РёРЅСѓ РґРѕРїРѕР»РЅРµРЅРёСЏ РЅР° СЃР»СѓС‡Р°Р№ РµСЃР»Рё С€РёСЂРёРЅР° РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РЅРµ РєСЂР°С‚РЅР° 4
 	int padding = get_row_data_padding(bmiHeader.biWidth);
 	char tmp[3] = { 0,0,0 };
-	// Считываем данные изображения в массив структур RGB 
+	// РЎС‡РёС‚С‹РІР°РµРј РґР°РЅРЅС‹Рµ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РІ РјР°СЃСЃРёРІ СЃС‚СЂСѓРєС‚СѓСЂ RGB 
 	for (int i = 0; i < bmiHeader.biHeight; i++)
 	{
 		InFile.read((char*)(&rgb[bmiHeader.biHeight - 1 - i][0]), bmiHeader.biWidth * sizeof(RGBTRIPLE)); // RGBTRIPLE {Blue Green bRed;}
 		if (padding > 0)
 			InFile.read((char*)(&tmp[0]), padding);
 	}
-	// Закрываем файл
+	// Р—Р°РєСЂС‹РІР°РµРј С„Р°Р№Р»
 	InFile.close();
 }
 
 void BMPWrite(RGBTRIPLE**& rgb, int imWidth, int imHeight, std::string fout)
 {
-	// Открываем файл для записи изображения в формат BMP
+	// РћС‚РєСЂС‹РІР°РµРј С„Р°Р№Р» РґР»СЏ Р·Р°РїРёСЃРё РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РІ С„РѕСЂРјР°С‚ BMP
 	std::ofstream OutFile(fout, std::ios::binary);
-	// Создаем заголовочную часть для файла BMP
+	// РЎРѕР·РґР°РµРј Р·Р°РіРѕР»РѕРІРѕС‡РЅСѓСЋ С‡Р°СЃС‚СЊ РґР»СЏ С„Р°Р№Р»Р° BMP
 	BITMAPFILEHEADER header = { 0 };
 	header.bfType = ('M' << 8) + 'B';
 	header.bfSize = bmp24b_file_size_calc(imWidth, imHeight);;
 	header.bfOffBits = 54;
-	// Создаем заголовочную часть для данных изображения 
+	// РЎРѕР·РґР°РµРј Р·Р°РіРѕР»РѕРІРѕС‡РЅСѓСЋ С‡Р°СЃС‚СЊ РґР»СЏ РґР°РЅРЅС‹С… РёР·РѕР±СЂР°Р¶РµРЅРёСЏ 
 	BITMAPINFOHEADER bmiHeader = { 0 };
-	// заполняем необходимыми данными
+	// Р·Р°РїРѕР»РЅСЏРµРј РЅРµРѕР±С…РѕРґРёРјС‹РјРё РґР°РЅРЅС‹РјРё
 	bmiHeader.biSize = 40;
 	bmiHeader.biWidth = imWidth;
 	bmiHeader.biHeight = imHeight;
 	bmiHeader.biPlanes = 1;
 	bmiHeader.biBitCount = 24;
 	bmiHeader.biSizeImage = header.bfSize - sizeof(BITMAPINFOHEADER) - sizeof(BITMAPFILEHEADER);
-	//// Записываем заголовок файла
+	//// Р—Р°РїРёСЃС‹РІР°РµРј Р·Р°РіРѕР»РѕРІРѕРє С„Р°Р№Р»Р°
 	OutFile.write((char*)(&header), sizeof(BITMAPFILEHEADER));
-	//// Записываем заголовочную часть изображения
+	//// Р—Р°РїРёСЃС‹РІР°РµРј Р·Р°РіРѕР»РѕРІРѕС‡РЅСѓСЋ С‡Р°СЃС‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
 	OutFile.write((char*)(&bmiHeader), sizeof(BITMAPINFOHEADER));
-	// определяем величину дополнения на случай если ширина изображения не кратна 4
+	// РѕРїСЂРµРґРµР»СЏРµРј РІРµР»РёС‡РёРЅСѓ РґРѕРїРѕР»РЅРµРЅРёСЏ РЅР° СЃР»СѓС‡Р°Р№ РµСЃР»Рё С€РёСЂРёРЅР° РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РЅРµ РєСЂР°С‚РЅР° 4
 	int padding = get_row_data_padding(bmiHeader.biWidth);
 	char tmp[3] = { 0,0,0 };
-	// Записываем данные изображения из массива структур RGBTRIPLE в файл 
+	// Р—Р°РїРёСЃС‹РІР°РµРј РґР°РЅРЅС‹Рµ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РёР· РјР°СЃСЃРёРІР° СЃС‚СЂСѓРєС‚СѓСЂ RGBTRIPLE РІ С„Р°Р№Р» 
 	for (int i = 0; i < bmiHeader.biHeight; i++)
 	{
 		OutFile.write((char*)&(rgb[bmiHeader.biHeight - i - 1][0]), bmiHeader.biWidth * sizeof(RGBTRIPLE));
 		if (padding > 0)
 			OutFile.write((char*)(&tmp[0]), padding);
 	}
-	// закрываем файл
+	// Р·Р°РєСЂС‹РІР°РµРј С„Р°Р№Р»
 	OutFile.close();
 }
-
